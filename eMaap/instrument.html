@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrument Details - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div id="instDetails"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["user", "admin"]);
+      if (!s) return;
+      
+      const params = new URLSearchParams(location.search);
+      const instId = params.get("id");
+      
+      if (!instId) {
+        document.getElementById("instDetails").innerHTML = `<div class="card"><p>Instrument not found</p></div>`;
+        return;
+      }
+
+      const inst = instruments().find(i => i.id === instId);
+      if (!inst) {
+        document.getElementById("instDetails").innerHTML = `<div class="card"><p>Instrument not found</p></div>`;
+        return;
+      }
+
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "instruments.html");
+
+      const cert = certs().find(c => c.instrumentId === inst.id);
+      const t = typeOf(inst.type);
+      const daysLeft = cert ? daysTo(cert.validTill) : null;
+      let status = inst.status;
+      if (cert) status = daysLeft < 0 ? "Expired" : daysLeft <= 30 ? "Expiring" : "Valid";
+
+      let html = `
+        <div class="head">
+          <h1>${inst.id}</h1>
+          <p class="subtitle">${t.name}</p>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>Instrument Information</h2>
+            <span class="tag ${status === 'Valid' ? 'ok' : status === 'Expiring' ? 'warn' : 'bad'}">${status}</span>
+          </div>
+
+          <div class="grid-2">
+            <div>
+              <h3 style="margin-bottom: 15px; color: #0b1f3a; font-size: 14px; text-transform: uppercase; color: #5a6780;">Specifications</h3>
+              <table style="width: 100%;">
+                <tr><td style="font-weight: 600;">Type:</td><td>${t.name}</td></tr>
+                <tr><td style="font-weight: 600;">Make:</td><td>${inst.make}</td></tr>
+                <tr><td style="font-weight: 600;">Model:</td><td>${inst.model}</td></tr>
+                <tr><td style="font-weight: 600;">Serial Number:</td><td><strong>${inst.serial}</strong></td></tr>
+                <tr><td style="font-weight: 600;">Capacity:</td><td>${inst.cap}</td></tr>
+                <tr><td style="font-weight: 600;">Division (e):</td><td>${inst.e}</td></tr>
+                <tr><td style="font-weight: 600;">Year of Mfg:</td><td>${inst.year}</td></tr>
+                <tr><td style="font-weight: 600;">Installation:</td><td>${inst.loc}</td></tr>
+              </table>
+            </div>
+
+            <div>
+              <h3 style="margin-bottom: 15px; color: #0b1f3a; font-size: 14px; text-transform: uppercase; color: #5a6780;">Verification Details</h3>
+              ${cert ? `
+                <table style="width: 100%;">
+                  <tr><td style="font-weight: 600;">Certificate ID:</td><td><a href="certificate.html?id=${encodeURIComponent(cert.id)}">${cert.id}</a></td></tr>
+                  <tr><td style="font-weight: 600;">Issue Date:</td><td>${cert.issued}</td></tr>
+                  <tr><td style="font-weight: 600;">Valid Till:</td><td><strong>${cert.validTill}</strong></td></tr>
+                  <tr><td style="font-weight: 600;">Days Remaining:</td><td><strong>${daysLeft > 0 ? daysLeft + ' days' : 'EXPIRED'}</strong></td></tr>
+                  <tr><td style="font-weight: 600;">Verified By:</td><td>${officerBy(cert.officer).name}</td></tr>
+                  <tr><td style="font-weight: 600;">Validity Period:</td><td>${t.periodMonths} months</td></tr>
+                </table>
+              ` : `
+                <p style="color: #5a6780; padding: 20px 0;">
+                  <strong>No verification certificate yet.</strong><br>
+                  <a href="apply.html?inst=${encodeURIComponent(inst.id)}" class="btn small" style="display: inline-block; margin-top: 10px;">Apply for Verification</a>
+                </p>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Verification History</h2>
+          <div id="historyContent"></div>
+        </div>
+      `;
+
+      document.getElementById("instDetails").innerHTML = html;
+
+      // Load history
+      const historyContent = document.getElementById("historyContent");
+      const allApps = apps().filter(a => a.instrumentId === inst.id);
+      
+      if (allApps.length === 0) {
+        historyContent.innerHTML = `<p style="padding: 20px; text-align: center; color: #5a6780;">No applications yet</p>`;
+      } else {
+        let historyHtml = `<table class="table">
+          <thead>
+            <tr>
+              <th>Application ID</th>
+              <th>Type</th>
+              <th>Applied On</th>
+              <th>Status</th>
+              <th>Certificate</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>`;
+
+        allApps.forEach(app => {
+          const appCert = certs().find(c => c.appId === app.id);
+          historyHtml += `<tr>
+            <td>${app.id}</td>
+            <td>${app.kind}</td>
+            <td>${app.created}</td>
+            <td>${statusTag(app.status)}</td>
+            <td>${appCert ? '<a href="certificate.html?id=' + encodeURIComponent(appCert.id) + '">' + appCert.id + '</a>' : '—'}</td>
+            <td><a href="application.html?app=${app.id}" class="btn small">View</a></td>
+          </tr>`;
+        });
+
+        historyHtml += `</tbody></table>`;
+        historyContent.innerHTML = historyHtml;
+      }
+    });
+  </script>
+</body>
+</html>

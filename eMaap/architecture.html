@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Architecture - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="arch">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container">
+      <div class="head" style="text-align: center; margin: 40px 0;">
+        <h1>System Architecture</h1>
+        <p class="subtitle">Technical documentation and security framework</p>
+      </div>
+
+      <div class="architecture-doc">
+        <div class="card">
+          <h2>1. System Overview</h2>
+          <p>eMaap is a web-based platform built with modern web technologies for online verification, digital certification, and lifecycle management of weighing and measuring instruments under the Legal Metrology Act, 2009.</p>
+          <h3>Key Components:</h3>
+          <ul>
+            <li><strong>Web Application:</strong> Responsive frontend for desktop and mobile browsers</li>
+            <li><strong>Mobile Field App:</strong> Offline-capable inspection recording system</li>
+            <li><strong>Digital Certificate Engine:</strong> QR-enabled certificate generation and validation</li>
+            <li><strong>Database:</strong> Centralized document storage with encryption</li>
+            <li><strong>API Gateway:</strong> RESTful APIs for third-party integration</li>
+            <li><strong>Notification Engine:</strong> Email/SMS for alerts and reminders</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>2. Technology Stack</h2>
+          <table class="tech-table">
+            <tr>
+              <td><strong>Frontend</strong></td>
+              <td>HTML5, CSS3, JavaScript (Vanilla/Frameworks)</td>
+            </tr>
+            <tr>
+              <td><strong>Mobile</strong></td>
+              <td>Progressive Web App (PWA) with offline support</td>
+            </tr>
+            <tr>
+              <td><strong>Backend</strong></td>
+              <td>Node.js/Python REST APIs</td>
+            </tr>
+            <tr>
+              <td><strong>Database</strong></td>
+              <td>PostgreSQL / MongoDB (encrypted at rest)</td>
+            </tr>
+            <tr>
+              <td><strong>Authentication</strong></td>
+              <td>OAuth 2.0, JWT tokens, LDAP integration</td>
+            </tr>
+            <tr>
+              <td><strong>Hosting</strong></td>
+              <td>Government Cloud (GCCP / AWS GovCloud)</td>
+            </tr>
+            <tr>
+              <td><strong>Certificates</strong></td>
+              <td>QR Code Library (qrcode.js), Digital Signing</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>3. Security Framework</h2>
+          <h3>Data Protection:</h3>
+          <ul>
+            <li><strong>Transport Security:</strong> HTTPS/TLS 1.2+ for all communications</li>
+            <li><strong>Data Encryption:</strong> AES-256 encryption for sensitive data at rest</li>
+            <li><strong>Database Security:</strong> Row-level security, encrypted backups</li>
+            <li><strong>Field Data:</strong> Local encryption before sync with cloud</li>
+          </ul>
+          <h3>Access Control:</h3>
+          <ul>
+            <li><strong>Role-Based Access Control (RBAC):</strong> User, LMO, GATC, Admin roles</li>
+            <li><strong>Multi-Factor Authentication:</strong> OTP via SMS/Email</li>
+            <li><strong>Session Management:</strong> Token expiry, concurrent session limit</li>
+            <li><strong>Audit Logging:</strong> All actions logged with timestamps and user info</li>
+          </ul>
+          <h3>Digital Certificates:</h3>
+          <ul>
+            <li><strong>Certificate Signing:</strong> Digital signature with private key</li>
+            <li><strong>QR Code Authentication:</strong> Unique hash per certificate</li>
+            <li><strong>Tamper Detection:</strong> Hash verification on public search</li>
+            <li><strong>Non-Repudiation:</strong> Officer signature binding</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>4. User Roles & Permissions</h2>
+          <table class="role-table">
+            <tr>
+              <th>Role</th>
+              <th>Can Register Instruments</th>
+              <th>Can Apply</th>
+              <th>Can Schedule</th>
+              <th>Can Inspect</th>
+              <th>Can Issue Certificates</th>
+              <th>Can View Reports</th>
+            </tr>
+            <tr>
+              <td>User</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✗</td>
+              <td>✗</td>
+              <td>Own Only</td>
+            </tr>
+            <tr>
+              <td>LMO</td>
+              <td>✗</td>
+              <td>✗</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>District</td>
+            </tr>
+            <tr>
+              <td>GATC</td>
+              <td>✗</td>
+              <td>✗</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>Lab Only</td>
+            </tr>
+            <tr>
+              <td>Admin</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>✓</td>
+              <td>All</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>5. API Endpoints (Planned)</h2>
+          <code style="display: block; padding: 15px; background: #f3f6fb; border-radius: 8px; overflow-x: auto;">
+POST /api/v1/auth/login
+POST /api/v1/auth/register
+GET /api/v1/instruments (authenticated)
+POST /api/v1/instruments (authenticated)
+GET /api/v1/applications (authenticated)
+POST /api/v1/applications (authenticated)
+GET /api/v1/certificates/:id (public)
+POST /api/v1/inspections (LMO/GATC)
+POST /api/v1/certificates/generate (LMO/GATC)
+GET /api/v1/reports (Admin)
+          </code>
+        </div>
+
+        <div class="card">
+          <h2>6. Deployment & Availability</h2>
+          <ul>
+            <li><strong>Server:</strong> Auto-scaling on cloud infrastructure</li>
+            <li><strong>Availability:</strong> 99.9% uptime SLA with redundancy</li>
+            <li><strong>Backups:</strong> Daily encrypted backups with point-in-time recovery</li>
+            <li><strong>Disaster Recovery:</strong> RPO 1 hour, RTO 4 hours</li>
+            <li><strong>Load Balancing:</strong> Geographic distribution across data centers</li>
+            <li><strong>CDN:</strong> Static assets cached globally</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>7. Compliance & Standards</h2>
+          <ul>
+            <li>Legal Metrology Act, 2009 & Rules, 2011</li>
+            <li>Information Technology Act, 2000</li>
+            <li>NIST Cybersecurity Framework</li>
+            <li>ISO 27001 Information Security Management</li>
+            <li>GDPR Compliance for international data</li>
+            <li>India Stack (Aadhaar optional integration)</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>8. Scalability & Performance</h2>
+          <ul>
+            <li><strong>Database:</strong> Sharding by state for distribution</li>
+            <li><strong>Caching:</strong> Redis for session and certificate cache</li>
+            <li><strong>API Rate Limiting:</strong> 1000 requests/hour per user</li>
+            <li><strong>Page Load:</strong> Target &lt; 2 seconds for all pages</li>
+            <li><strong>Mobile App:</strong> Works on 2G+ networks with offline sync</li>
+            <li><strong>Concurrent Users:</strong> Support 100,000+ simultaneous users</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>9. Integration Points</h2>
+          <ul>
+            <li><strong>Payment Gateway:</strong> Razorpay / NEFT for fee collection</li>
+            <li><strong>SMS/Email:</strong> AWS SES / Twilio for notifications</li>
+            <li><strong>Document Storage:</strong> AWS S3 / Google Cloud Storage for photos/documents</li>
+            <li><strong>GST Portal:</strong> Integration with GST portal for invoicing</li>
+            <li><strong>State LM Systems:</strong> Data exchange APIs for legacy systems</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h2>10. Future Enhancements</h2>
+          <ul>
+            <li>Blockchain for immutable certificate ledger</li>
+            <li>AI-based defect detection from inspection photos</li>
+            <li>Mobile native apps (iOS/Android) for field officers</li>
+            <li>Voice-based application submission</li>
+            <li>Integration with State e-governance portals</li>
+            <li>Advanced analytics and predictive maintenance</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <style>
+    .architecture-doc { margin: 20px 0; }
+    .tech-table, .role-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    .tech-table tr, .role-table tr { border-bottom: 1px solid #dbe3ee; }
+    .tech-table td, .tech-table th, .role-table td, .role-table th { padding: 12px; text-align: left; }
+    .tech-table tr:nth-child(even), .role-table tr:nth-child(even) { background: #f3f6fb; }
+    .role-table th { background: #0b1f3a; color: white; }
+    code { font-family: 'Courier New', monospace; font-size: 12px; }
+  </style>
+</body>
+</html>

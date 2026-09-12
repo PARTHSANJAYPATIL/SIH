@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schedule Inspection - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Schedule Inspection</h1>
+          <p class="subtitle">Allocate verification to officers or GATCs and schedule inspection date/time</p>
+        </div>
+
+        <div class="card">
+          <form id="schedForm" class="form">
+            <label for="sapp">Select Application *</label>
+            <select id="sapp" required>
+              <option value="">— Select Application —</option>
+            </select>
+            <p class="help" id="appDetails"></p>
+
+            <label for="assignTo">Assign to Officer / GATC *</label>
+            <select id="assignTo" required></select>
+
+            <label for="sdate">Inspection Date *</label>
+            <input id="sdate" type="date" required>
+
+            <label for="stime">Time Slot *</label>
+            <select id="stime" required>
+              <option value="">— Select —</option>
+              <option value="09:00-11:00">09:00 AM - 11:00 AM</option>
+              <option value="11:00-13:00">11:00 AM - 01:00 PM</option>
+              <option value="14:00-16:00">02:00 PM - 04:00 PM</option>
+              <option value="16:00-18:00">04:00 PM - 06:00 PM</option>
+            </select>
+
+            <label for="notes">Scheduling Notes (optional)</label>
+            <textarea id="notes" rows="3" placeholder="Any special instructions for the inspection"></textarea>
+
+            <button type="submit" class="btn green">Schedule Inspection</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/workflow.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["lmo", "gatc", "admin"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "schedule.html");
+
+      // Load pending applications
+      const pending = apps().filter(a => a.status === 'Submitted');
+      const sapp = document.getElementById("sapp");
+      sapp.innerHTML += pending.map(a => {
+        const inst = instruments().find(i => i.id === a.instrumentId);
+        return `<option value="${a.id}">${a.id} - ${inst.id}</option>`;
+      }).join("");
+
+      // Show app details when selected
+      sapp.addEventListener("change", () => {
+        const appId = sapp.value;
+        if (!appId) return;
+        const app = apps().find(a => a.id === appId);
+        const inst = instruments().find(i => i.id === app.instrumentId);
+        const user = users().find(u => u.id === app.userId);
+        document.getElementById("appDetails").innerHTML = 
+          `<strong>${inst.id}</strong> (${typeOf(inst.type).name}) | User: ${user.name} | ${user.phone}`;
+      });
+    });
+  </script>
+</body>
+</html>

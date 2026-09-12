@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="login">
+  <div id="site-nav"></div>
+  
+  <section class="auth-section">
+    <div class="container narrow">
+      <div class="card auth-card">
+        <h2>Login to eMaap</h2>
+        <p class="auth-desc">Access your verification account or perform administrative tasks</p>
+        
+        <div class="role-selector">
+          <button class="role on" data-role="user">
+            <span class="icon">📦</span>
+            <span>User Account</span>
+          </button>
+          <button class="role" data-role="lmo">
+            <span class="icon">👮</span>
+            <span>LMO</span>
+          </button>
+          <button class="role" data-role="gatc">
+            <span class="icon">🏢</span>
+            <span>GATC</span>
+          </button>
+          <button class="role" data-role="admin">
+            <span class="icon">⚙️</span>
+            <span>Admin</span>
+          </button>
+        </div>
+
+        <form id="loginForm" class="form">
+          <label for="email">Email Address</label>
+          <input id="email" type="email" placeholder="your@email.com" required>
+          
+          <label for="pass">Password</label>
+          <input id="pass" type="password" placeholder="••••••••" required>
+          
+          <button type="submit" class="btn green full">Login</button>
+        </form>
+
+        <div class="divider">OR</div>
+        <a href="register.html" class="btn outline full">Create New Account</a>
+
+        <div class="demo-info">
+          <p><strong>Demo Credentials:</strong></p>
+          <p>Any account with password: <code>demo123</code></p>
+          <p>Try <code>accounts@shreemart.in</code> (User), <code>kavita.lmo@maharashtra.gov.in</code> (LMO), <code>gatc.pune@demo.gov.in</code> (GATC), or <code>lm.admin@nic.in</code> (Admin)</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

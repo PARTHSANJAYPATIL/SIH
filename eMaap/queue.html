@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Queue - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Verification Queue</h1>
+          <p class="subtitle">Manage and allocate verification applications</p>
+        </div>
+
+        <div class="tabs">
+          <button class="tab on" data-tab="pending">Pending Applications</button>
+          <button class="tab" data-tab="scheduled">Scheduled Inspections</button>
+          <button class="tab" data-tab="completed">Completed</button>
+        </div>
+
+        <div class="tab-content on" id="pending">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Application ID</th>
+                <th>Instrument</th>
+                <th>Applicant</th>
+                <th>Type</th>
+                <th>Submitted</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="pendingBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tab-content" id="scheduled">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Application ID</th>
+                <th>Instrument</th>
+                <th>Scheduled Date/Time</th>
+                <th>Location</th>
+                <th>Officer/GATC</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="scheduledBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="tab-content" id="completed">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Application ID</th>
+                <th>Instrument</th>
+                <th>Result</th>
+                <th>Completed Date</th>
+                <th>Certificate</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="completedBody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["lmo", "gatc", "admin"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "queue.html");
+
+      const allApps = apps();
+      const pending = allApps.filter(a => a.status === 'Submitted');
+      const scheduled = allApps.filter(a => a.status === 'Scheduled');
+      const completed = allApps.filter(a => a.status === 'Certificate issued' || a.status === 'Rejected');
+
+      renderPending(pending);
+      renderScheduled(scheduled);
+      renderCompleted(completed);
+
+      // Tab switching
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          const tabId = tab.dataset.tab;
+          document.querySelectorAll(".tab").forEach(t => t.classList.remove("on"));
+          document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("on"));
+          tab.classList.add("on");
+          document.getElementById(tabId)?.classList.add("on");
+        });
+      });
+    });
+
+    function renderPending(apps) {
+      const body = document.getElementById("pendingBody");
+      if (!body) return;
+      
+      if (apps.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No pending applications</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = apps.map(app => {
+        const inst = instruments().find(i => i.id === app.instrumentId);
+        const user = users().find(u => u.id === app.userId);
+        return `<tr>
+          <td><strong>${app.id}</strong></td>
+          <td>${inst.id}</td>
+          <td>${user.name}</td>
+          <td>${app.kind}</td>
+          <td>${app.created}</td>
+          <td><a href="schedule.html?app=${app.id}" class="btn small">Schedule</a></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderScheduled(apps) {
+      const body = document.getElementById("scheduledBody");
+      if (!body) return;
+      
+      if (apps.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No scheduled inspections</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = apps.map(app => {
+        const inst = instruments().find(i => i.id === app.instrumentId);
+        const officer = officerBy(app.assigned);
+        return `<tr>
+          <td><strong>${app.id}</strong></td>
+          <td>${inst.id}</td>
+          <td>${app.slot}</td>
+          <td>${inst.loc}</td>
+          <td>${officer.name}</td>
+          <td><a href="field.html?app=${app.id}" class="btn small">Start</a></td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderCompleted(apps) {
+      const body = document.getElementById("completedBody");
+      if (!body) return;
+      
+      if (apps.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px;">No completed inspections</td></tr>`;
+        return;
+      }
+
+      body.innerHTML = apps.map(app => {
+        const inst = instruments().find(i => i.id === app.instrumentId);
+        const inspection = insp().find(i => i.appId === app.id);
+        const cert = certs().find(c => c.appId === app.id);
+        return `<tr>
+          <td>${app.id}</td>
+          <td>${inst.id}</td>
+          <td>${statusTag(app.status)}</td>
+          <td>${inspection?.at?.slice(0, 10) || '—'}</td>
+          <td>${cert ? '<a href="certificate.html?id=' + encodeURIComponent(cert.id) + '">' + cert.id + '</a>' : '—'}</td>
+          <td>${cert ? '<a href="certificate.html?id=' + encodeURIComponent(cert.id) + '" class="btn small">View Cert</a>' : '—'}</td>
+        </tr>`;
+      }).join("");
+    }
+  </script>
+</body>
+</html>

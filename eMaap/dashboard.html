@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Dashboard</h1>
+          <div class="user-info" id="who"></div>
+        </div>
+
+        <div id="dashContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin();
+      if (!s) return;
+      
+      const role = s.role;
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(role, "dashboard.html");
+
+      const content = document.getElementById("dashContent");
+      if (!content) return;
+
+      const myApps = apps().filter(a => a.userId === s.id || role !== 'user');
+      const myInst = instruments().filter(i => i.userId === s.id || role !== 'user');
+
+      let html = '';
+
+      if (role === 'user') {
+        // User Dashboard
+        const validCount = myInst.filter(i => {
+          const cert = certs().find(c => c.instrumentId === i.id);
+          return cert && daysTo(cert.validTill) >= 0;
+        }).length;
+        const expiringCount = myInst.filter(i => {
+          const cert = certs().find(c => c.instrumentId === i.id);
+          return cert && daysTo(cert.validTill) < 30 && daysTo(cert.validTill) >= 0;
+        }).length;
+        const expiredCount = myInst.filter(i => {
+          const cert = certs().find(c => c.instrumentId === i.id);
+          return cert && daysTo(cert.validTill) < 0;
+        }).length;
+
+        html = `
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-num">${myInst.length}</div>
+              <div class="stat-label">Total Instruments</div>
+            </div>
+            <div class="stat-box ok">
+              <div class="stat-num">${validCount}</div>
+              <div class="stat-label">Valid</div>
+            </div>
+            <div class="stat-box warn">
+              <div class="stat-num">${expiringCount}</div>
+              <div class="stat-label">Expiring Soon</div>
+            </div>
+            <div class="stat-box bad">
+              <div class="stat-num">${expiredCount}</div>
+              <div class="stat-label">Expired</div>
+            </div>
+          </div>
+
+          <h2>Recent Applications</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Application ID</th>
+                <th>Instrument</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Assigned To</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>`;
+        
+        myApps.slice(0, 5).forEach(app => {
+          const inst = instruments().find(i => i.id === app.instrumentId);
+          html += `<tr>
+            <td><a href="application.html?app=${app.id}">${app.id}</a></td>
+            <td>${inst.id}</td>
+            <td>${typeOf(inst.type).name}</td>
+            <td>${statusTag(app.status)}</td>
+            <td>${officerBy(app.assigned)?.name || '—'}</td>
+            <td><a href="application.html?app=${app.id}" class="btn small">View</a></td>
+          </tr>`;
+        });
+
+        html += `</tbody></table>`;
+      } else if (role === 'lmo' || role === 'gatc') {
+        // LMO/GATC Dashboard
+        const pendingApps = myApps.filter(a => a.status === 'Submitted');
+        const scheduledApps = myApps.filter(a => a.status === 'Scheduled');
+        const inspectedApps = myApps.filter(a => a.status === 'Certificate issued' || a.status === 'Rejected');
+
+        html = `
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-num">${pendingApps.length}</div>
+              <div class="stat-label">Pending Assignment</div>
+            </div>
+            <div class="stat-box info">
+              <div class="stat-num">${scheduledApps.length}</div>
+              <div class="stat-label">Scheduled Today</div>
+            </div>
+            <div class="stat-box ok">
+              <div class="stat-num">${inspectedApps.length}</div>
+              <div class="stat-label">Completed This Month</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-num">${myApps.length}</div>
+              <div class="stat-label">Total Workload</div>
+            </div>
+          </div>
+
+          <h2>Verification Queue</h2>
+          <div class="tabs">
+            <button class="tab on" data-tab="pending">Pending (${pendingApps.length})</button>
+            <button class="tab" data-tab="scheduled">Scheduled (${scheduledApps.length})</button>
+            <button class="tab" data-tab="completed">Completed (${inspectedApps.length})</button>
+          </div>
+          
+          <div class="tab-content on" id="pending">
+            <table class="table">
+              <thead>
+                <tr><th>ID</th><th>Instrument</th><th>User</th><th>Submitted</th><th>Action</th></tr>
+              </thead>
+              <tbody>`;
+        
+        pendingApps.forEach(app => {
+          const inst = instruments().find(i => i.id === app.instrumentId);
+          const user = users().find(u => u.id === app.userId);
+          html += `<tr>
+            <td>${app.id}</td>
+            <td>${inst.id}</td>
+            <td>${user.name}</td>
+            <td>${app.created}</td>
+            <td><a href="queue.html?app=${app.id}" class="btn small">Schedule</a></td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>
+          <div class="tab-content" id="scheduled">
+            <table class="table">
+              <thead>
+                <tr><th>ID</th><th>Instrument</th><th>Slot</th><th>Location</th><th>Action</th></tr>
+              </thead>
+              <tbody>`;
+        
+        scheduledApps.forEach(app => {
+          const inst = instruments().find(i => i.id === app.instrumentId);
+          html += `<tr>
+            <td>${app.id}</td>
+            <td>${inst.id}</td>
+            <td>${app.slot}</td>
+            <td>${inst.loc}</td>
+            <td><a href="field.html?app=${app.id}" class="btn small">Start Inspection</a></td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>
+          <div class="tab-content" id="completed">
+            <table class="table">
+              <thead>
+                <tr><th>ID</th><th>Result</th><th>Certificate</th><th>Date</th><th>Action</th></tr>
+              </thead>
+              <tbody>`;
+        
+        inspectedApps.slice(0, 5).forEach(app => {
+          const inspection = insp().find(i => i.appId === app.id);
+          const cert = certs().find(c => c.appId === app.id);
+          html += `<tr>
+            <td>${app.id}</td>
+            <td>${statusTag(app.status)}</td>
+            <td>${cert ? '<a href="certificate.html?id=' + encodeURIComponent(cert.id) + '">' + cert.id + '</a>' : '—'}</td>
+            <td>${inspection?.at?.slice(0, 10) || '—'}</td>
+            <td>${cert ? '<a href="certificate.html?id=' + encodeURIComponent(cert.id) + '" class="btn small">View</a>' : '—'}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table></div>`;
+      } else if (role === 'admin') {
+        // Admin Dashboard
+        const allStates = [...new Set(users().map(u => u.state))];
+        const pendingTotal = myApps.filter(a => a.status === 'Submitted').length;
+        const certCount = certs().length;
+
+        html = `
+          <div class="stats">
+            <div class="stat-box">
+              <div class="stat-num">${users().filter(u => u.role === 'user').length}</div>
+              <div class="stat-label">Registered Users</div>
+            </div>
+            <div class="stat-box info">
+              <div class="stat-num">${myApps.length}</div>
+              <div class="stat-label">Total Applications</div>
+            </div>
+            <div class="stat-box warn">
+              <div class="stat-num">${pendingTotal}</div>
+              <div class="stat-label">Pending Assignment</div>
+            </div>
+            <div class="stat-box ok">
+              <div class="stat-num">${certCount}</div>
+              <div class="stat-label">Certificates Issued</div>
+            </div>
+          </div>
+
+          <h2>National Overview</h2>
+          <div class="grid">
+            <div class="card">
+              <h3>Coverage</h3>
+              <p class="big">${allStates.length}</p>
+              <p>States/UTs Active</p>
+            </div>
+            <div class="card">
+              <h3>Pendency Rate</h3>
+              <p class="big">${myApps.length > 0 ? Math.round(pendingTotal * 100 / myApps.length) : 0}%</p>
+              <p>Applications in queue</p>
+            </div>
+            <div class="card">
+              <h3>Processing Rate</h3>
+              <p class="big">${certCount}</p>
+              <p>Certificates issued</p>
+            </div>
+          </div>
+
+          <h2>Recent Applications by State</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Total Apps</th>
+                <th>Pending</th>
+                <th>Scheduled</th>
+                <th>Completed</th>
+              </tr>
+            </thead>
+            <tbody>`;
+        
+        allStates.forEach(state => {
+          const stateApps = myApps.filter(a => {
+            const user = users().find(u => u.id === a.userId);
+            return user && user.state === state;
+          });
+          const pending = stateApps.filter(a => a.status === 'Submitted').length;
+          const scheduled = stateApps.filter(a => a.status === 'Scheduled').length;
+          const completed = stateApps.filter(a => a.status === 'Certificate issued' || a.status === 'Rejected').length;
+          
+          html += `<tr>
+            <td>${state}</td>
+            <td>${stateApps.length}</td>
+            <td>${pending}</td>
+            <td>${scheduled}</td>
+            <td>${completed}</td>
+          </tr>`;
+        });
+
+        html += `</tbody></table>`;
+      }
+
+      content.innerHTML = html;
+
+      // Tab switching functionality
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const tabId = tab.dataset.tab;
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('on'));
+          tab.classList.add('on');
+          document.getElementById(tabId)?.classList.add('on');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Certificate - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="search">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container">
+      <div class="head" style="text-align: center; margin: 40px 0;">
+        <h1>Verify Certificate Authenticity</h1>
+        <p class="subtitle">Search and validate legal metrology verification certificates</p>
+      </div>
+
+      <div class="search-section">
+        <div class="card search-card">
+          <h2>Search by Certificate ID</h2>
+          <form id="searchForm" class="form">
+            <label for="certId">Certificate ID</label>
+            <input id="certId" type="text" placeholder="e.g., LM/MH/PUN/2026/7781" required>
+            <button type="submit" class="btn green full">Search</button>
+          </form>
+        </div>
+
+        <div class="card search-card">
+          <h2>Search by Instrument</h2>
+          <form id="searchInstForm" class="form">
+            <label for="instId">Instrument ID</label>
+            <input id="instId" type="text" placeholder="e.g., IN-MH-10021" required>
+            <button type="submit" class="btn green full">Search</button>
+          </form>
+        </div>
+
+        <div class="card search-card">
+          <h2>Search by QR Code</h2>
+          <form id="searchQRForm" class="form">
+            <label for="qrCode">QR Code Value</label>
+            <input id="qrCode" type="text" placeholder="Scan or paste QR code" required>
+            <button type="submit" class="btn green full">Verify QR</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="searchResults"></div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(location.search);
+      const certId = params.get("cert");
+      const instId = params.get("inst");
+
+      if (certId) searchByCert(certId);
+      if (instId) searchByInst(instId);
+
+      document.getElementById("searchForm").addEventListener("submit", e => {
+        e.preventDefault();
+        searchByCert(document.getElementById("certId").value);
+      });
+
+      document.getElementById("searchInstForm").addEventListener("submit", e => {
+        e.preventDefault();
+        searchByInst(document.getElementById("instId").value);
+      });
+
+      document.getElementById("searchQRForm").addEventListener("submit", e => {
+        e.preventDefault();
+        searchByQR(document.getElementById("qrCode").value);
+      });
+    });
+
+    function searchByCert(certId) {
+      const cert = certs().find(c => c.id.toUpperCase() === certId.toUpperCase());
+      if (!cert) {
+        showResult(`<div class="alert danger">Certificate not found.</div>`);
+        return;
+      }
+      displayCertResult(cert);
+    }
+
+    function searchByInst(instId) {
+      const cert = certs().find(c => c.instrumentId === instId);
+      if (!cert) {
+        showResult(`<div class="alert danger">No valid certificate found for this instrument.</div>`);
+        return;
+      }
+      displayCertResult(cert);
+    }
+
+    function searchByQR(qrCode) {
+      const cert = certs().find(c => c.qr === qrCode || c.id === qrCode);
+      if (!cert) {
+        showResult(`<div class="alert danger">QR code not verified. Invalid or expired.</div>`);
+        return;
+      }
+      displayCertResult(cert);
+    }
+
+    function displayCertResult(cert) {
+      const inst = instruments().find(i => i.id === cert.instrumentId);
+      const app = apps().find(a => a.id === cert.appId);
+      const officer = officerBy(cert.officer);
+      const daysLeft = daysTo(cert.validTill);
+      const status = daysLeft < 0 ? "Expired" : daysLeft <= 30 ? "Expiring" : "Valid";
+
+      let html = `
+        <div class="card result-card" style="margin-top: 30px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>${cert.id}</h2>
+            <span class="tag ${status.toLowerCase()} big">${status}</span>
+          </div>
+
+          <div class="result-grid">
+            <div>
+              <h3>Certificate Details</h3>
+              <table>
+                <tr><td>Certificate ID:</td><td><strong>${cert.id}</strong></td></tr>
+                <tr><td>Status:</td><td>${statusTag(status)}</td></tr>
+                <tr><td>Issued Date:</td><td>${cert.issued}</td></tr>
+                <tr><td>Valid Till:</td><td>${cert.validTill}</td></tr>
+                <tr><td>Days Remaining:</td><td><strong>${daysLeft > 0 ? daysLeft + ' days' : 'EXPIRED'}</strong></td></tr>
+                <tr><td>Officer:</td><td>${officer.name}<br><small>${officer.desig}</small></td></tr>
+              </table>
+            </div>
+
+            <div>
+              <h3>Instrument Details</h3>
+              <table>
+                <tr><td>Instrument ID:</td><td><strong>${inst.id}</strong></td></tr>
+                <tr><td>Type:</td><td>${typeOf(inst.type).name}</td></tr>
+                <tr><td>Make:</td><td>${inst.make}</td></tr>
+                <tr><td>Model:</td><td>${inst.model}</td></tr>
+                <tr><td>Serial Number:</td><td>${inst.serial}</td></tr>
+                <tr><td>Capacity:</td><td>${inst.cap}</td></tr>
+                <tr><td>Division:</td><td>${inst.e}</td></tr>
+                <tr><td>Location:</td><td>${inst.loc}</td></tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="cert-security" style="margin-top: 20px; padding: 20px; background: #f0f8f4; border-radius: 8px;">
+            <h3>Security & Authentication</h3>
+            <div class="cert-qr" style="text-align: center; margin: 15px 0;">
+              <canvas id="resultQR" width="200" height="200"></canvas>
+              <p style="font-size: 12px; color: #666; margin-top: 10px;">Certificate QR Code</p>
+            </div>
+            <div style="text-align: center;">
+              <p><strong>Stamp:</strong> ${cert.stamp}</p>
+              <p><strong>Authentication Hash:</strong> <code style="font-size: 11px; word-break: break-all;">${cert.id.replace(/\//g, '-')}-${cert.issued.replace(/-/g, '')}</code></p>
+            </div>
+          </div>
+
+          <div class="alert success" style="margin-top: 20px;">
+            ✓ This certificate is <strong>${status.toLowerCase()}</strong> and authentic. 
+            ${status === 'Valid' ? 'No renewal action required at this time.' : status === 'Expiring' ? 'Renewal application should be submitted.' : 'Renewal is overdue. Please submit immediately.'}
+          </div>
+        </div>
+      `;
+
+      showResult(html);
+      setTimeout(() => {
+        const qrCanvas = document.getElementById("resultQR");
+        if (qrCanvas) drawQR(qrCanvas, cert.qr);
+      }, 100);
+    }
+
+    function showResult(html) {
+      document.getElementById("searchResults").innerHTML = html;
+    }
+  </script>
+</body>
+</html>

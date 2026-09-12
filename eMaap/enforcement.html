@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enforcement & Compliance - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Enforcement & Compliance</h1>
+          <p class="subtitle">Monitor expired certificates and compliance status</p>
+        </div>
+
+        <div class="alert warn">
+          <strong>⚠ Enforcement Alert</strong> <br>
+          Instruments with expired certificates are in violation of Legal Metrology Act, 2009 and subject to enforcement action.
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <h2>Expired Certificates (Enforcement)</h2>
+          <table class="table" id="expiredTable">
+            <thead>
+              <tr>
+                <th>Instrument ID</th>
+                <th>Owner</th>
+                <th>Certificate ID</th>
+                <th>Expired Date</th>
+                <th>Days Overdue</th>
+                <th>Location</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="expiredBody">
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h2>Compliance Summary</h2>
+          <div class="stats">
+            <div class="stat-box ok">
+              <div class="stat-num" id="compliantCount">0</div>
+              <div class="stat-label">Compliant (Valid Certificates)</div>
+            </div>
+            <div class="stat-box warn">
+              <div class="stat-num" id="expiringCount">0</div>
+              <div class="stat-label">Non-Compliant (Expiring/Expired)</div>
+            </div>
+            <div class="stat-box danger">
+              <div class="stat-num" id="enforcementCount">0</div>
+              <div class="stat-label">Under Enforcement Action</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["lmo", "gatc", "admin"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "enforcement.html");
+
+      // Find all instruments with expired certificates
+      const expired = instruments().filter(inst => {
+        const cert = certs().find(c => c.instrumentId === inst.id);
+        return cert && daysTo(cert.validTill) < 0;
+      });
+
+      let html = `<thead>
+        <tr>
+          <th>Instrument ID</th>
+          <th>Owner</th>
+          <th>Certificate ID</th>
+          <th>Expired Date</th>
+          <th>Days Overdue</th>
+          <th>Location</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+      expired.forEach(inst => {
+        const cert = certs().find(c => c.instrumentId === inst.id);
+        const user = users().find(u => u.id === inst.userId);
+        const daysOverdue = Math.abs(daysTo(cert.validTill));
+        
+        html += `<tr>
+          <td><strong>${inst.id}</strong></td>
+          <td>${user.name}</td>
+          <td>${cert.id}</td>
+          <td>${cert.validTill}</td>
+          <td><span class="tag bad">${daysOverdue} days</span></td>
+          <td>${inst.loc}</td>
+          <td><span class="tag bad">EXPIRED</span></td>
+        </tr>`;
+      });
+
+      html += `</tbody>`;
+      document.getElementById("expiredTable").innerHTML = html;
+
+      // Calculate compliance stats
+      const allInst = instruments();
+      const validCerts = allInst.filter(inst => {
+        const cert = certs().find(c => c.instrumentId === inst.id);
+        return cert && daysTo(cert.validTill) >= 0;
+      }).length;
+
+      const nonCompliant = allInst.filter(inst => {
+        const cert = certs().find(c => c.instrumentId === inst.id);
+        return !cert || daysTo(cert.validTill) < 0;
+      }).length;
+
+      document.getElementById("compliantCount").textContent = validCerts;
+      document.getElementById("expiringCount").textContent = allInst.filter(inst => {
+        const cert = certs().find(c => c.instrumentId === inst.id);
+        return cert && daysTo(cert.validTill) < 30 && daysTo(cert.validTill) >= 0;
+      }).length;
+      document.getElementById("enforcementCount").textContent = expired.length;
+    });
+  </script>
+</body>
+</html>

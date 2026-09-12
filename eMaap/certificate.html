@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Certificate - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container narrow">
+      <div id="certContent"></div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const params = new URLSearchParams(location.search);
+      const certId = params.get("id");
+      const isPrint = params.get("print");
+
+      if (!certId) {
+        document.getElementById("certContent").innerHTML = `<div class="card"><p style="text-align: center; padding: 40px;">Certificate not found.</p></div>`;
+        return;
+      }
+
+      const cert = certs().find(c => c.id === certId);
+      if (!cert) {
+        document.getElementById("certContent").innerHTML = `<div class="card"><p style="text-align: center; padding: 40px;">Certificate not found.</p></div>`;
+        return;
+      }
+
+      const inst = instruments().find(i => i.id === cert.instrumentId);
+      const officer = officerBy(cert.officer);
+      const daysLeft = daysTo(cert.validTill);
+      const status = daysLeft < 0 ? "Expired" : daysLeft <= 30 ? "Expiring" : "Valid";
+
+      let html = `
+        <div class="certificate" style="background: white; padding: 40px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.1); margin: 20px 0;">
+          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #138808; padding-bottom: 20px;">
+            <div class="tricolor" style="height: 6px; margin-bottom: 20px;"></div>
+            <h1 style="color: #0b1f3a; margin: 0;">LEGAL METROLOGY VERIFICATION CERTIFICATE</h1>
+            <p style="color: #5a6780; margin: 10px 0 0 0; font-size: 13px;">Ministry of Consumer Affairs, Food & Public Distribution</p>
+            <p style="color: #5a6780; margin: 5px 0; font-size: 13px;">Department of Consumer Affairs (DoCA)</p>
+          </div>
+
+          <div style="margin: 30px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+              <div>
+                <h3 style="color: #0b1f3a; border-bottom: 1px solid #dbe3ee; padding-bottom: 8px;">CERTIFICATE DETAILS</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                  <tr><td style="padding: 8px 0; font-weight: 600; width: 40%;">Certificate No.:</td><td style="padding: 8px 0;"><strong>${cert.id}</strong></td></tr>
+                  <tr><td style="padding: 8px 0; font-weight: 600;">Issue Date:</td><td style="padding: 8px 0;">${cert.issued}</td></tr>
+                  <tr><td style="padding: 8px 0; font-weight: 600;">Valid Till:</td><td style="padding: 8px 0; font-weight: 600; color: #138808;">${cert.validTill}</td></tr>
+                  <tr><td style="padding: 8px 0; font-weight: 600;">Status:</td><td style="padding: 8px 0;">${statusTag(status)}</td></tr>
+                  <tr><td style="padding: 8px 0; font-weight: 600;">Verifying Officer:</td><td style="padding: 8px 0;"><strong>${officer.name}</strong><br><small>${officer.desig}</small></td></tr>
+                </table>
+              </div>
+
+              <div style="text-align: center; background: #f3f6fb; padding: 20px; border-radius: 8px;">
+                <p style="font-size: 12px; color: #5a6780; margin-bottom: 10px;">QR CODE</p>
+                <canvas id="qrCode" width="180" height="180"></canvas>
+                <p style="font-size: 11px; color: #5a6780; margin-top: 10px; word-break: break-all;">${cert.qr}</p>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="color: #0b1f3a; border-bottom: 1px solid #dbe3ee; padding-bottom: 8px; margin-top: 30px;">INSTRUMENT DETAILS</h3>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600; width: 20%;">Instrument ID</td>
+              <td style="padding: 8px;">${inst.id}</td>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600; width: 20%;">Type</td>
+              <td style="padding: 8px;">${typeOf(inst.type).name}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;">Make</td>
+              <td style="padding: 8px;">${inst.make}</td>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;">Model</td>
+              <td style="padding: 8px;">${inst.model}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;">Serial Number</td>
+              <td style="padding: 8px;">${inst.serial}</td>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;">Capacity</td>
+              <td style="padding: 8px;">${inst.cap}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;">Division (e)</td>
+              <td style="padding: 8px;">${inst.e}</td>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;">Year of Mfg</td>
+              <td style="padding: 8px;">${inst.year}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; background: #f3f6fb; font-weight: 600;" colspan="2">Installation Location</td>
+              <td style="padding: 8px;" colspan="2">${inst.loc}</td>
+            </tr>
+          </table>
+
+          <div style="margin-top: 30px; padding: 20px; background: #f0f8f4; border-left: 4px solid #138808; border-radius: 4px;">
+            <h3 style="color: #138808; margin-top: 0;">VERIFICATION RESULT: PASS ✓</h3>
+            <p style="margin: 10px 0;">This instrument has been verified and found to be within the Maximum Permissible Error (MPE) as per Legal Metrology Act, 2009 and related rules.</p>
+            <p style="margin: 10px 0; font-size: 13px; color: #5a6780;">
+              <strong>Official Stamp:</strong> ${cert.stamp}<br>
+              <strong>Seal Applied:</strong> Yes<br>
+              <strong>Authentication Code:</strong> <code style="font-size: 11px;">${cert.id.replace(/\//g, '-')}-AUTH</code>
+            </p>
+          </div>
+
+          <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #5a6780; border-top: 1px solid #dbe3ee; padding-top: 20px;">
+            <p>This is a digitally signed certificate issued by the Ministry of Consumer Affairs (DoCA).</p>
+            <p>For verification, visit: <strong>www.emaap.india.gov.in</strong> and search by certificate ID or QR code.</p>
+            <p style="margin-top: 20px; font-weight: 600;">Certificate valid for ${typeOf(inst.type).periodMonths} months from issue date.</p>
+            ${!isPrint ? `<button onclick="window.print()" class="btn small" style="margin-top: 20px;">Print Certificate</button>` : ''}
+          </div>
+        </div>
+      `;
+
+      document.getElementById("certContent").innerHTML = html;
+      setTimeout(() => {
+        const qrCanvas = document.getElementById("qrCode");
+        if (qrCanvas) drawQR(qrCanvas, cert.qr);
+      }, 100);
+
+      if (isPrint) {
+        setTimeout(() => window.print(), 500);
+      }
+    });
+  </script>
+
+  <style>
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      #site-nav, #site-footer, .btn {
+        display: none !important;
+      }
+      .certificate {
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
+</body>
+</html>

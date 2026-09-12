@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Applications - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>My Applications</h1>
+          <p class="subtitle">Track all your verification applications</p>
+        </div>
+
+        <div class="tabs">
+          <button class="tab on" data-tab="all">All Applications</button>
+          <button class="tab" data-tab="submitted">Submitted</button>
+          <button class="tab" data-tab="scheduled">Scheduled</button>
+          <button class="tab" data-tab="completed">Completed</button>
+        </div>
+
+        <div class="tab-content on" id="all">
+          <table class="table" id="allAppsTable">
+          </table>
+        </div>
+
+        <div class="tab-content" id="submitted">
+          <table class="table" id="submittedTable">
+          </table>
+        </div>
+
+        <div class="tab-content" id="scheduled">
+          <table class="table" id="scheduledTable">
+          </table>
+        </div>
+
+        <div class="tab-content" id="completed">
+          <table class="table" id="completedTable">
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["user"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "applications.html");
+
+      const myApps = apps().filter(a => a.userId === s.id);
+      const submitted = myApps.filter(a => a.status === 'Submitted');
+      const scheduled = myApps.filter(a => a.status === 'Scheduled');
+      const completed = myApps.filter(a => a.status === 'Certificate issued' || a.status === 'Rejected');
+
+      renderAppTable('allAppsTable', myApps);
+      renderAppTable('submittedTable', submitted);
+      renderAppTable('scheduledTable', scheduled);
+      renderAppTable('completedTable', completed);
+
+      // Tab switching
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          const tabId = tab.dataset.tab;
+          document.querySelectorAll(".tab").forEach(t => t.classList.remove("on"));
+          document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("on"));
+          tab.classList.add("on");
+          document.getElementById(tabId)?.classList.add("on");
+        });
+      });
+    });
+
+    function renderAppTable(tableId, apps) {
+      const table = document.getElementById(tableId);
+      if (!table) return;
+
+      if (apps.length === 0) {
+        table.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 30px;">No applications found</td></tr>`;
+        return;
+      }
+
+      let html = `
+        <thead>
+          <tr>
+            <th>Application ID</th>
+            <th>Instrument</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Applied On</th>
+            <th>Assigned To</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      apps.forEach(app => {
+        const inst = instruments().find(i => i.id === app.instrumentId);
+        const officer = app.assigned ? officerBy(app.assigned) : null;
+        html += `<tr>
+          <td><strong>${app.id}</strong></td>
+          <td>${inst.id}</td>
+          <td>${app.kind}</td>
+          <td>${statusTag(app.status)}</td>
+          <td>${app.created}</td>
+          <td>${officer?.name || '—'}</td>
+          <td>
+            <a href="application.html?app=${app.id}" class="btn small">View Details</a>
+          </td>
+        </tr>`;
+      });
+
+      html += `</tbody>`;
+      table.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

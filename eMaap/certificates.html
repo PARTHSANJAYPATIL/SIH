@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Certificates - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Verification Certificates</h1>
+          <p class="subtitle">View and download your digital verification certificates</p>
+        </div>
+
+        <div id="certContent"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin();
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "certificates.html");
+
+      const content = document.getElementById("certContent");
+      if (!content) return;
+
+      const myCerts = s.role === "user" 
+        ? certs().filter(c => {
+            const app = apps().find(a => a.id === c.appId);
+            return app && app.userId === s.id;
+          })
+        : certs();
+
+      if (myCerts.length === 0) {
+        content.innerHTML = `<div class="card"><p style="text-align: center; padding: 40px;">No certificates issued yet.</p></div>`;
+        return;
+      }
+
+      let html = `<div class="certs-grid">`;
+      myCerts.forEach(cert => {
+        const app = apps().find(a => a.id === cert.appId);
+        const inst = instruments().find(i => i.id === cert.instrumentId);
+        const daysLeft = daysTo(cert.validTill);
+        const status = daysLeft < 0 ? "Expired" : daysLeft <= 30 ? "Expiring" : "Valid";
+        
+        html += `<div class="cert-card card">
+          <div class="cert-header">
+            <h3>${cert.id}</h3>
+            <span class="tag ${status.toLowerCase()}">${status}</span>
+          </div>
+          <div class="cert-body">
+            <p><strong>Instrument:</strong> ${inst?.id}</p>
+            <p><strong>Type:</strong> ${typeOf(inst?.type).name}</p>
+            <p><strong>Make/Model:</strong> ${inst?.make} ${inst?.model}</p>
+            <p><strong>Serial:</strong> ${inst?.serial}</p>
+            <div class="cert-dates">
+              <div>
+                <small>Issued</small>
+                <strong>${cert.issued}</strong>
+              </div>
+              <div>
+                <small>Valid Till</small>
+                <strong>${cert.validTill}</strong>
+              </div>
+              <div>
+                <small>Days Left</small>
+                <strong>${daysLeft > 0 ? daysLeft : 'Expired'}</strong>
+              </div>
+            </div>
+            <div class="cert-qr" style="background: #f0f0f0; padding: 10px; border-radius: 8px; text-align: center; margin: 10px 0;">
+              <canvas id="qr-${cert.id}" width="150" height="150"></canvas>
+            </div>
+            <p style="font-size: 12px; color: #666; text-align: center; margin-top: 5px;">QR Code: ${cert.qr}</p>
+          </div>
+          <div class="cert-footer">
+            <a href="certificate.html?id=${encodeURIComponent(cert.id)}" class="btn small">Full Certificate</a>
+            <button class="btn small outline" onclick="printCert('${cert.id}')">Print</button>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+
+      content.innerHTML = html;
+
+      // Generate QR codes
+      myCerts.forEach(cert => {
+        const canvas = document.getElementById(`qr-${cert.id}`);
+        if (canvas) drawQR(canvas, cert.qr);
+      });
+    });
+
+    function printCert(certId) {
+      window.open("certificate.html?id=" + encodeURIComponent(certId) + "&print=1", "print");
+    }
+  </script>
+</body>
+</html>

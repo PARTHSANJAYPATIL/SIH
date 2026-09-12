@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reports & Analytics - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Reports & Analytics</h1>
+          <p class="subtitle">Export data and generate compliance reports</p>
+        </div>
+
+        <div class="report-section">
+          <div class="card">
+            <h2>Export Options</h2>
+            <div class="button-group">
+              <button onclick="exportCertificates()" class="btn saffron">Export Certificates (CSV)</button>
+              <button onclick="exportApplications()" class="btn saffron">Export Applications (CSV)</button>
+              <button onclick="exportInstruments()" class="btn saffron">Export Instruments (CSV)</button>
+              <button onclick="generateReport()" class="btn green">Generate PDF Report</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="card">
+            <h2>Pending Applications Report</h2>
+            <table class="table" id="pendingReport">
+            </table>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="card">
+            <h2>State-wise Summary</h2>
+            <table class="table" id="stateReport">
+            </table>
+          </div>
+        </div>
+
+        <div class="report-section">
+          <div class="card">
+            <h2>Monthly Statistics</h2>
+            <div id="monthlyStats"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["admin"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "reports.html");
+
+      generatePendingReport();
+      generateStateReport();
+      generateMonthlyStats();
+    });
+
+    function generatePendingReport() {
+      const pending = apps().filter(a => a.status === 'Submitted');
+      let html = `
+        <thead>
+          <tr>
+            <th>Application ID</th>
+            <th>User</th>
+            <th>Instrument</th>
+            <th>Submitted Date</th>
+            <th>Days Pending</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      
+      pending.forEach(a => {
+        const user = users().find(u => u.id === a.userId);
+        const inst = instruments().find(i => i.id === a.instrumentId);
+        const daysPending = daysTo(a.created);
+        html += `<tr>
+          <td>${a.id}</td>
+          <td>${user.name}</td>
+          <td>${inst.id}</td>
+          <td>${a.created}</td>
+          <td>${Math.abs(daysPending)}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody>`;
+      document.getElementById("pendingReport").innerHTML = html;
+    }
+
+    function generateStateReport() {
+      const states = [...new Set(users().map(u => u.state))];
+      let html = `
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>Total Users</th>
+            <th>Total Apps</th>
+            <th>Certificates Issued</th>
+            <th>Pending</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      
+      states.forEach(state => {
+        const stateUsers = users().filter(u => u.state === state);
+        const stateApps = apps().filter(a => {
+          const user = users().find(u => u.id === a.userId);
+          return user && user.state === state;
+        });
+        const certs = stateApps.filter(a => a.status === 'Certificate issued').length;
+        const pending = stateApps.filter(a => a.status === 'Submitted').length;
+        
+        html += `<tr>
+          <td>${state}</td>
+          <td>${stateUsers.length}</td>
+          <td>${stateApps.length}</td>
+          <td>${certs}</td>
+          <td>${pending}</td>
+        </tr>`;
+      });
+      
+      html += `</tbody>`;
+      document.getElementById("stateReport").innerHTML = html;
+    }
+
+    function generateMonthlyStats() {
+      const months = {};
+      apps().forEach(a => {
+        const month = a.created.slice(0, 7);
+        months[month] = (months[month] || 0) + 1;
+      });
+
+      let html = '<div class="stat-grid">';
+      Object.entries(months).sort().forEach(([month, count]) => {
+        html += `<div class="stat-item">
+          <div class="stat-month">${month}</div>
+          <div class="stat-count">${count}</div>
+          <div class="stat-label">Applications</div>
+        </div>`;
+      });
+      html += '</div>';
+
+      document.getElementById("monthlyStats").innerHTML = html;
+    }
+
+    function exportCertificates() {
+      const data = certs().map(c => ({
+        'Certificate ID': c.id,
+        'Instrument ID': c.instrumentId,
+        'Issued Date': c.issued,
+        'Valid Till': c.validTill,
+        'Officer': officerBy(c.officer).name,
+        'Status': new Date(c.validTill) < new Date() ? 'Expired' : 'Valid'
+      }));
+      downloadCSV(data, 'certificates.csv');
+    }
+
+    function exportApplications() {
+      const data = apps().map(a => ({
+        'Application ID': a.id,
+        'User': users().find(u => u.id === a.userId)?.name,
+        'Instrument': a.instrumentId,
+        'Type': a.kind,
+        'Status': a.status,
+        'Created': a.created,
+        'Fee': inr(a.fee),
+        'Assigned To': officerBy(a.assigned)?.name || '—'
+      }));
+      downloadCSV(data, 'applications.csv');
+    }
+
+    function exportInstruments() {
+      const data = instruments().map(i => ({
+        'Instrument ID': i.id,
+        'Type': typeOf(i.type).name,
+        'Make': i.make,
+        'Model': i.model,
+        'Serial Number': i.serial,
+        'Capacity': i.cap,
+        'Location': i.loc,
+        'Status': i.status
+      }));
+      downloadCSV(data, 'instruments.csv');
+    }
+
+    function downloadCSV(data, filename) {
+      const headers = Object.keys(data[0]);
+      const csv = [headers.join(','), ...data.map(obj => headers.map(h => '"' + (obj[h] || '') + '"').join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function generateReport() {
+      alert('PDF report generation coming soon');
+    }
+  </script>
+
+  <style>
+    .report-section { margin-bottom: 30px; }
+    .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+    .stat-item { background: #f3f6fb; padding: 15px; border-radius: 8px; text-align: center; }
+    .stat-month { font-weight: 600; color: #0b1f3a; }
+    .stat-count { font-size: 24px; font-weight: 700; color: #ff9933; margin: 8px 0; }
+    .stat-label { font-size: 12px; color: #5a6780; }
+  </style>
+</body>
+</html>

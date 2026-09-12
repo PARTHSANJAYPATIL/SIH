@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Logistics · KrishiBazar</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-page="logistics">
+  <div id="site-nav"></div>
+  <section class="section">
+    <div class="container">
+      <h2>Logistics support</h2>
+      <p class="sub">Aggregation at FPO, cold store, reefer line-haul, and last-mile to housing societies or kirana clusters. Temperature logged for perishables.</p>
+      <div class="layout-2">
+        <article class="card">
+          <h3>Book movement</h3>
+          <form id="lgForm" class="form">
+            <input id="lgCrop" required placeholder="Crop e.g. Kolar tomato" />
+            <select id="lgFrom"></select>
+            <select id="lgTo"></select>
+            <select id="lgVeh"></select>
+            <input id="lgWhen" type="date" required />
+            <button class="btn" type="submit">Assign vehicle</button>
+          </form>
+        </article>
+        <article class="card">
+          <h3>Live shipments</h3>
+          <table>
+            <thead><tr><th>ID</th><th>Crop</th><th>From</th><th>To</th><th>Status</th><th>ETA</th><th>Temp</th></tr></thead>
+            <tbody id="shipBody"></tbody>
+          </table>
+        </article>
+      </div>
+      <div class="grid-3" style="margin-top:16px">
+        <div class="card"><div class="icon">🧊</div><h3>Cold chain</h3><p>2–8°C reefers for dairy, greens and tomato. 8–12°C for onion/potato where needed.</p></div>
+        <div class="card"><div class="icon">📍</div><h3>Hub & spoke</h3><p>FPO collection → district cold room → city cluster. Avoids double handling at traditional mandis.</p></div>
+        <div class="card"><div class="icon">📦</div><h3>Last mile</h3><p>Society drop, kirana milk-run, or institutional dock. Proof of delivery on phone.</p></div>
+      </div>
+    </div>
+  </section>
+  <div id="site-footer"></div>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/logistics.js"></script>
+</body>
+</html>

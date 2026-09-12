@@ -1,0 +1,61 @@
+# Ignore files & directories
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+npm-debug.log
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+coverage/
+*.test.js
+
+# Temporary
+temp/
+tmp/
+*.tmp
+
+# Database backups
+*.db
+*.sqlite
+backup/
+
+# Assets (large files)
+*.mp4
+*.mov
+*.psd
+*.sketch
+
+# Custom
+.DS_Store
+config.local.js

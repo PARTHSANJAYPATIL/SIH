@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Application Details - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div id="appDetails"></div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin();
+      if (!s) return;
+      
+      const params = new URLSearchParams(location.search);
+      const appId = params.get("app");
+      
+      if (!appId) {
+        document.getElementById("appDetails").innerHTML = `<div class="card"><p>Application not found</p></div>`;
+        return;
+      }
+
+      const app = apps().find(a => a.id === appId);
+      if (!app) {
+        document.getElementById("appDetails").innerHTML = `<div class="card"><p>Application not found</p></div>`;
+        return;
+      }
+
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role);
+
+      const inst = instruments().find(i => i.id === app.instrumentId);
+      const user = users().find(u => u.id === app.userId);
+      const t = typeOf(inst.type);
+      const officer = app.assigned ? officerBy(app.assigned) : null;
+      const inspection = insp().find(i => i.appId === app.id);
+      const cert = certs().find(c => c.appId === app.id);
+
+      let html = `
+        <div class="head">
+          <h1>${app.id}</h1>
+          <p class="subtitle">Application for ${app.kind}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+          <div class="card">
+            <h2>Application Status</h2>
+            <div style="padding: 20px 0; text-align: center;">
+              <div style="font-size: 48px; font-weight: 800; color: #0b1f3a; margin-bottom: 10px;">${statusTag(app.status)}</div>
+              <p style="color: #5a6780; margin: 10px 0;">Applied: <strong>${app.created}</strong></p>
+              <p style="color: #5a6780; margin: 10px 0;">Fee: <strong>${inr(app.fee)} ${app.paid ? '(Paid)' : '(Pending)'}</strong></p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Scheduling Info</h2>
+            ${app.slot ? `
+              <p><strong>Scheduled:</strong> ${app.slot}</p>
+              <p><strong>Assigned to:</strong> ${officer?.name}</p>
+              <p><strong>Designation:</strong> ${officer?.desig}</p>
+            ` : `
+              <p style="color: #5a6780;">Awaiting scheduling</p>
+            `}
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <h2>Instrument Details</h2>
+          <table style="width: 100%;">
+            <tr>
+              <td style="font-weight: 600; width: 30%;">Instrument ID:</td>
+              <td><a href="instrument.html?id=${encodeURIComponent(inst.id)}">${inst.id}</a></td>
+              <td style="font-weight: 600; width: 30%;">Type:</td>
+              <td>${t.name}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Make/Model:</td>
+              <td>${inst.make} ${inst.model}</td>
+              <td style="font-weight: 600;">Serial:</td>
+              <td>${inst.serial}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Capacity:</td>
+              <td>${inst.cap}</td>
+              <td style="font-weight: 600;">Division:</td>
+              <td>${inst.e}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Location:</td>
+              <td colspan="3">${inst.loc}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="card" style="margin-bottom: 20px;">
+          <h2>Applicant Details</h2>
+          <table style="width: 100%;">
+            <tr>
+              <td style="font-weight: 600; width: 30%;">Name:</td>
+              <td>${user.name}</td>
+              <td style="font-weight: 600; width: 30%;">Email:</td>
+              <td>${user.email}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Phone:</td>
+              <td>${user.phone}</td>
+              <td style="font-weight: 600;">State/District:</td>
+              <td>${user.state} / ${user.district}</td>
+            </tr>
+            ${user.gstin !== '—' ? `
+            <tr>
+              <td style="font-weight: 600;">GSTIN:</td>
+              <td colspan="3">${user.gstin}</td>
+            </tr>
+            ` : ''}
+          </table>
+        </div>
+
+        ${inspection ? `
+        <div class="card" style="margin-bottom: 20px;">
+          <h2>Inspection Report</h2>
+          <table style="width: 100%;">
+            <tr>
+              <td style="font-weight: 600; width: 30%;">Result:</td>
+              <td>${statusTag(inspection.result)}</td>
+              <td style="font-weight: 600; width: 30%;">Conducted By:</td>
+              <td>${officerBy(inspection.officer).name}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Inspection Date:</td>
+              <td>${inspection.at?.slice(0, 10)}</td>
+              <td style="font-weight: 600;">Zero/No-load:</td>
+              <td>${inspection.zero || '—'}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;">Span Test:</td>
+              <td>${inspection.error || '—'}</td>
+              <td style="font-weight: 600;">Seal Applied:</td>
+              <td>${inspection.seal}</td>
+            </tr>
+            <tr>
+              <td style="font-weight: 600;" colspan="2">Observations:</td>
+              <td colspan="2">${inspection.notes}</td>
+            </tr>
+          </table>
+        </div>
+        ` : ''}
+
+        ${cert ? `
+        <div class="card alert ok">
+          <h2>✓ Certificate Issued</h2>
+          <p><strong>Certificate ID:</strong> <a href="certificate.html?id=${encodeURIComponent(cert.id)}">${cert.id}</a></p>
+          <p><strong>Issue Date:</strong> ${cert.issued}</p>
+          <p><strong>Valid Till:</strong> ${cert.validTill}</p>
+          <a href="certificate.html?id=${encodeURIComponent(cert.id)}" class="btn small" style="margin-top: 10px;">View Full Certificate</a>
+        </div>
+        ` : ''}
+      `;
+
+      document.getElementById("appDetails").innerHTML = html;
+    });
+  </script>
+</body>
+</html>

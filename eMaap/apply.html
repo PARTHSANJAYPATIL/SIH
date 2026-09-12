@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apply for Verification - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="apply">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Apply for Verification</h1>
+          <p class="subtitle">Register instruments and submit verification applications</p>
+        </div>
+
+        <div class="tabs-h">
+          <button class="tab-h on" data-tab="add-inst">Step 1: Add Instrument</button>
+          <button class="tab-h" data-tab="apply">Step 2: Apply for Verification</button>
+          <button class="tab-h" data-tab="schedule">Step 3: Schedule</button>
+        </div>
+
+        <!-- Add Instrument Tab -->
+        <div class="tab-panel on" id="add-inst">
+          <div class="card">
+            <h2>Register New Instrument</h2>
+            <p>First, register your weighing or measuring instrument in the system.</p>
+            
+            <form id="instForm" class="form">
+              <div class="form-row">
+                <div>
+                  <label for="itype">Instrument Type *</label>
+                  <select id="itype" required></select>
+                </div>
+                <div>
+                  <label for="make">Make / Manufacturer *</label>
+                  <input id="make" type="text" placeholder="e.g., Essae, Avery, Gilbarco" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="model">Model Number *</label>
+                  <input id="model" type="text" placeholder="e.g., DS-852" required>
+                </div>
+                <div>
+                  <label for="serial">Serial Number *</label>
+                  <input id="serial" type="text" placeholder="e.g., ES-88210" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="cap">Capacity / Range *</label>
+                  <input id="cap" type="text" placeholder="e.g., 30 kg" required>
+                </div>
+                <div>
+                  <label for="evalue">Division / Accuracy (e) *</label>
+                  <input id="evalue" type="text" placeholder="e.g., 5 g" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div>
+                  <label for="year">Year of Manufacture *</label>
+                  <input id="year" type="number" min="1990" max="2099" placeholder="YYYY" required>
+                </div>
+                <div>
+                  <label for="loc">Location / Installation Address *</label>
+                  <input id="loc" type="text" placeholder="Complete address" required>
+                </div>
+              </div>
+
+              <button type="submit" class="btn green">Register Instrument</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Apply Tab -->
+        <div class="tab-panel" id="apply">
+          <div class="card">
+            <h2>Submit Verification Application</h2>
+            <p>Choose the instrument and type of verification required.</p>
+            
+            <form id="appForm" class="form">
+              <label for="ainstr">Select Instrument *</label>
+              <select id="ainstr" required></select>
+              <p class="help">Don't see your instrument? Add it first using Step 1.</p>
+
+              <label for="akind">Verification Type *</label>
+              <select id="akind" required>
+                <option value="">— Select —</option>
+                <option value="Initial verification">Initial Verification (New instrument)</option>
+                <option value="Re-verification">Re-verification (Renewal)</option>
+                <option value="Special inspection">Special Inspection (Defect/damage)</option>
+              </select>
+
+              <label for="aremark">Additional Remarks (optional)</label>
+              <textarea id="aremark" rows="3" placeholder="Any special requirements or instructions"></textarea>
+
+              <label for="apref">Preferred Verification Date (optional)</label>
+              <input id="apref" type="date">
+
+              <div class="alert info">
+                <strong>Verification Fee</strong>
+                <p>Fee will be calculated based on instrument type. Payment can be made after application submission.</p>
+              </div>
+
+              <button type="submit" class="btn green">Submit Application</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Schedule Tab -->
+        <div class="tab-panel" id="schedule">
+          <div class="card">
+            <h2>Schedule Verification</h2>
+            <p>Choose your preferred slot for field inspection.</p>
+            
+            <form id="schedForm" class="form">
+              <label for="sapp">Select Application *</label>
+              <select id="sapp" required></select>
+
+              <label for="sdate">Preferred Date *</label>
+              <input id="sdate" type="date" required>
+
+              <label for="stime">Preferred Time Slot *</label>
+              <select id="stime" required>
+                <option value="">— Select —</option>
+                <option value="09:00-11:00">09:00 AM - 11:00 AM</option>
+                <option value="11:00-13:00">11:00 AM - 01:00 PM</option>
+                <option value="14:00-16:00">02:00 PM - 04:00 PM</option>
+                <option value="16:00-18:00">04:00 PM - 06:00 PM</option>
+              </select>
+
+              <label for="assignTo">Preferred Officer/GATC</label>
+              <select id="assignTo"></select>
+
+              <button type="submit" class="btn green">Schedule Inspection</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/workflow.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["user"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "apply.html");
+
+      // Tab switching
+      document.querySelectorAll(".tab-h").forEach(tab => {
+        tab.addEventListener("click", () => {
+          const tabId = tab.dataset.tab;
+          document.querySelectorAll(".tab-h").forEach(t => t.classList.remove("on"));
+          document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("on"));
+          tab.classList.add("on");
+          document.getElementById(tabId)?.classList.add("on");
+        });
+      });
+    });
+  </script>
+</body>
+</html>

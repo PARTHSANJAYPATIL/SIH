@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="register">
+  <div id="site-nav"></div>
+  
+  <section class="auth-section">
+    <div class="container narrow">
+      <div class="card auth-card">
+        <h2>Create Account</h2>
+        <p class="auth-desc">Register as a user of weighing and measuring instruments</p>
+        
+        <div class="role-selector">
+          <button class="role on" data-role="user">
+            <span class="icon">📦</span>
+            <span>User Account</span>
+          </button>
+        </div>
+
+        <form id="regForm" class="form">
+          <label for="rname">Business / Organization Name</label>
+          <input id="rname" type="text" placeholder="e.g., Shree Mart Pvt Ltd" required>
+          
+          <label for="remail">Email Address</label>
+          <input id="remail" type="email" placeholder="your@business.com" required>
+          
+          <label for="rphone">Contact Phone</label>
+          <input id="rphone" type="tel" placeholder="10-digit mobile number" required>
+          
+          <label for="rstate">State</label>
+          <select id="rstate" required></select>
+          
+          <label for="rdist">District</label>
+          <input id="rdist" type="text" placeholder="e.g., Pune" required>
+          
+          <label for="rgst">GSTIN (optional)</label>
+          <input id="rgst" type="text" placeholder="15-digit GSTIN" pattern=".{0,15}">
+          
+          <label for="rpass">Password</label>
+          <input id="rpass" type="password" placeholder="Min 6 characters" minlength="6" required>
+          
+          <label class="checkbox">
+            <input type="checkbox" required>
+            <span>I agree to the Terms of Service and Privacy Policy</span>
+          </label>
+          
+          <button type="submit" class="btn green full">Create Account</button>
+        </form>
+
+        <div class="divider">OR</div>
+        <p style="text-align: center;">Already have an account? <a href="login.html" style="font-weight: 700;">Login here</a></p>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

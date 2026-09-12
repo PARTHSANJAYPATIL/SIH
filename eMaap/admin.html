@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration Panel - eMaap</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="dash">
+  <div id="site-nav"></div>
+  
+  <section class="main">
+    <div class="container flex">
+      <div id="side-nav"></div>
+      
+      <div class="content">
+        <div class="head">
+          <h1>Administration Panel</h1>
+          <p class="subtitle">System management and SLA monitoring</p>
+        </div>
+
+        <div class="tabs">
+          <button class="tab on" data-tab="sla">SLA Monitoring</button>
+          <button class="tab" data-tab="users">User Management</button>
+          <button class="tab" data-tab="system">System Settings</button>
+        </div>
+
+        <div class="tab-content on" id="sla">
+          <div class="card" style="margin-bottom: 20px;">
+            <h2>SLA Compliance Dashboard</h2>
+            <div class="stats">
+              <div class="stat-box">
+                <div class="stat-num" id="avgProcessingTime">5</div>
+                <div class="stat-label">Avg Processing Time (days)</div>
+              </div>
+              <div class="stat-box ok">
+                <div class="stat-num" id="slaCompliance">95%</div>
+                <div class="stat-label">SLA Compliance</div>
+              </div>
+              <div class="stat-box warn">
+                <div class="stat-num" id="pendingApps">12</div>
+                <div class="stat-label">Pending (>7 days)</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-num" id="avgTurnaround">6</div>
+                <div class="stat-label">Avg Turnaround (days)</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>State-wise SLA Performance</h2>
+            <table class="table" id="slaTable">
+              <thead>
+                <tr>
+                  <th>State</th>
+                  <th>Applications</th>
+                  <th>Avg Processing Time</th>
+                  <th>Compliance Rate</th>
+                  <th>Target SLA</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-content" id="users">
+          <div class="card">
+            <h2>System Users</h2>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>State/District</th>
+                  <th>Last Login</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="usersTable">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tab-content" id="system">
+          <div class="card">
+            <h2>System Configuration</h2>
+            <form class="form" style="max-width: 600px;">
+              <h3 style="margin-top: 20px;">Verification Fees</h3>
+              <label for="ewmFee">Electronic Weighing Machine Fee (₹)</label>
+              <input id="ewmFee" type="number" value="200">
+              
+              <label for="wbrFee">Weighbridge Fee (₹)</label>
+              <input id="wbrFee" type="number" value="2500">
+
+              <h3 style="margin-top: 20px;">SLA Settings</h3>
+              <label for="slaTarget">Target Processing Time (days)</label>
+              <input id="slaTarget" type="number" value="7">
+
+              <label for="alertDays">Renewal Alert Period (days)</label>
+              <input id="alertDays" type="number" value="30">
+
+              <h3 style="margin-top: 20px;">System Status</h3>
+              <label>System Health</label>
+              <div style="padding: 10px; background: #ecfdf3; border-radius: 8px; color: #067647;">
+                ✓ All systems operational. Uptime: 99.97%
+              </div>
+
+              <button type="button" class="btn green" style="margin-top: 20px;">Save Configuration</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="site-footer"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const s = requireLogin(["admin"]);
+      if (!s) return;
+      
+      const side = document.getElementById("side-nav");
+      if (side) side.innerHTML = sideHTML(s.role, "admin.html");
+
+      // Calculate SLA metrics
+      const allApps = apps();
+      const completedApps = allApps.filter(a => a.status === 'Certificate issued');
+      
+      let totalDays = 0;
+      completedApps.forEach(app => {
+        const created = new Date(app.created);
+        const cert = certs().find(c => c.appId === app.id);
+        if (cert) {
+          const issued = new Date(cert.issued);
+          totalDays += Math.floor((issued - created) / 86400000);
+        }
+      });
+      
+      const avgTime = completedApps.length > 0 ? Math.round(totalDays / completedApps.length) : 0;
+      document.getElementById("avgProcessingTime").textContent = avgTime;
+      document.getElementById("avgTurnaround").textContent = avgTime + 1;
+
+      const pendingLong = allApps.filter(a => a.status === 'Submitted' && 
+        Math.floor((new Date() - new Date(a.created)) / 86400000) > 7).length;
+      document.getElementById("pendingApps").textContent = pendingLong;
+
+      const slaCompliance = completedApps.length > 0 ? 
+        Math.round((completedApps.filter(a => {
+          const created = new Date(a.created);
+          const cert = certs().find(c => c.appId === a.id);
+          if (!cert) return false;
+          const issued = new Date(cert.issued);
+          return Math.floor((issued - created) / 86400000) <= 7;
+        }).length / completedApps.length) * 100) : 95;
+      document.getElementById("slaCompliance").textContent = slaCompliance + '%';
+
+      // State-wise SLA
+      const states = [...new Set(users().map(u => u.state))];
+      const slaTable = document.querySelector("#slaTable tbody");
+      
+      states.forEach(state => {
+        const stateApps = allApps.filter(a => {
+          const user = users().find(u => u.id === a.userId);
+          return user && user.state === state;
+        });
+        const stateCompleted = stateApps.filter(a => a.status === 'Certificate issued');
+        
+        let stateTotalDays = 0;
+        stateCompleted.forEach(app => {
+          const created = new Date(app.created);
+          const cert = certs().find(c => c.appId === app.id);
+          if (cert) {
+            const issued = new Date(cert.issued);
+            stateTotalDays += Math.floor((issued - created) / 86400000);
+          }
+        });
+        
+        const stateAvgTime = stateCompleted.length > 0 ? Math.round(stateTotalDays / stateCompleted.length) : 0;
+        const stateComplianceRate = stateCompleted.length > 0 ?
+          Math.round((stateCompleted.filter(a => {
+            const created = new Date(a.created);
+            const cert = certs().find(c => c.appId === a.id);
+            if (!cert) return false;
+            const issued = new Date(cert.issued);
+            return Math.floor((issued - created) / 86400000) <= 7;
+          }).length / stateCompleted.length) * 100) : 95;
+
+        const status = stateComplianceRate >= 90 ? 'ok' : stateComplianceRate >= 75 ? 'warn' : 'bad';
+        const statusText = stateComplianceRate >= 90 ? 'On Track' : stateComplianceRate >= 75 ? 'At Risk' : 'Critical';
+        
+        slaTable.innerHTML += `<tr>
+          <td>${state}</td>
+          <td>${stateApps.length}</td>
+          <td>${stateAvgTime} days</td>
+          <td>${stateComplianceRate}%</td>
+          <td>7 days</td>
+          <td><span class="tag ${status}">${statusText}</span></td>
+        </tr>`;
+      });
+
+      // Users table
+      const usersTable = document.getElementById("usersTable");
+      users().slice(0, 10).forEach(u => {
+        usersTable.innerHTML += `<tr>
+          <td>${u.name}</td>
+          <td><span class="tag info">${u.role.toUpperCase()}</span></td>
+          <td>${u.state}${u.district ? ' / ' + u.district : ''}</td>
+          <td>Today</td>
+          <td><span class="tag ok">Active</span></td>
+        </tr>`;
+      });
+
+      // Tab switching
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+          const tabId = tab.dataset.tab;
+          document.querySelectorAll(".tab").forEach(t => t.classList.remove("on"));
+          document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("on"));
+          tab.classList.add("on");
+          document.getElementById(tabId)?.classList.add("on");
+        });
+      });
+    });
+  </script>
+</body>
+</html>
